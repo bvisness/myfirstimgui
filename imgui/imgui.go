@@ -90,10 +90,8 @@ func Main() {
 			}()
 
 			ctx := UIContext{
-				Base: &UIBase{
-					Hot:    hotPrevious,
-					Active: activePrevious,
-				},
+				Hot:    hotPrevious,
+				Active: activePrevious,
 
 				Mouse: UIMouse{
 					PosPrevious:         image.Pt(mouseXPrevious, mouseYPrevious),
@@ -105,8 +103,8 @@ func Main() {
 				Img: currentTex.Img,
 			}
 			defer func() {
-				hotPrevious = ctx.Base.Hot
-				activePrevious = ctx.Base.Active
+				hotPrevious = ctx.Hot
+				activePrevious = ctx.Active
 			}()
 
 			currentTex.Img.Fill(color.RGBA{255, 255, 255, 0})
@@ -173,20 +171,20 @@ func genQuadVAO() uint32 {
 }
 
 func doUI(ctx *UIContext) {
-	columnList := ctx.WithPosition(image.Pt(20, 20)).NewListLayouter(20, true)
+	columnList := ctx.NewListLayouter(image.Pt(20, 20), 20, true)
 
 	for c := 0; c < 4; c++ {
-		columnList.Item(func(ctx *UIContext) image.Point {
-			rowList := ctx.NewListLayouter(20, false)
+		columnList.Item(func(pos image.Point) image.Point {
+			rowList := ctx.NewListLayouter(pos, 20, false)
 
 			for r := 0; r < 4; r++ {
 				id := c*4 + r
-				rowList.Item(func(ctx *UIContext) image.Point {
+				rowList.Item(func(pos image.Point) image.Point {
 					t := float64(time.Now().UnixNano())/float64(time.Second) + float64(id)/2
 					width := 60 + int(math.Cos(t)*30)
 					height := 60 + int(math.Sin(t)*30)
 
-					result := ctx.WithSize(image.Pt(width, height)).DoButton(fmt.Sprintf("b%v", id), "Hello, world!", buttonColor(r, c))
+					result := ctx.Button(fmt.Sprintf("b%v", id), "Hello, world!", pos, image.Pt(width, height), buttonColor(r, c))
 					if result.Clicked {
 						log.Printf("Button %v clicked!", id)
 					}

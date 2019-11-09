@@ -3,7 +3,6 @@ package imgui
 import (
 	"image"
 	"image/color"
-	"log"
 
 	"github.com/bvisness/myfirstimgui/util"
 )
@@ -16,15 +15,6 @@ func (id UIID) String() string {
 	return id.Name
 }
 
-type SizedResult interface {
-	DrawnSize() image.Point
-}
-
-type UIBase struct {
-	Hot    *UIID
-	Active *UIID
-}
-
 type UIMouse struct {
 	PosPrevious image.Point
 	Pos         image.Point
@@ -33,54 +23,43 @@ type UIMouse struct {
 	IsMouseDown         bool
 }
 
-type UIPosition struct {
-	image.Point
-}
-
-type UISize struct {
-	image.Point
-}
-
 type UIContext struct {
-	// this will never be nil
-	Base *UIBase
+	Hot    *UIID
+	Active *UIID
 
 	Mouse UIMouse
-
-	Pos  *UIPosition
-	Size *UISize
 
 	Img UIImage
 }
 
 func (ctx *UIContext) IsHot(obj UIID) bool {
-	if ctx.Base.Hot == nil {
+	if ctx.Hot == nil {
 		return false
 	}
 
-	return *ctx.Base.Hot == obj
+	return *ctx.Hot == obj
 }
 
 func (ctx *UIContext) IsActive(obj UIID) bool {
-	if ctx.Base.Active == nil {
+	if ctx.Active == nil {
 		return false
 	}
 
-	return *ctx.Base.Active == obj
+	return *ctx.Active == obj
 }
 
 func (ctx *UIContext) SetHot(obj UIID) {
-	if ctx.Base.Active == nil {
-		ctx.Base.Hot = &obj
+	if ctx.Active == nil {
+		ctx.Hot = &obj
 	}
 }
 
 func (ctx *UIContext) SetActive(obj UIID) {
-	ctx.Base.Active = &obj
+	ctx.Active = &obj
 }
 
 func (ctx *UIContext) SetNoneActive() {
-	ctx.Base.Active = nil
+	ctx.Active = nil
 }
 
 func (ctx *UIContext) IsMouseDownThisFrame() bool {
@@ -91,45 +70,22 @@ func (ctx *UIContext) IsMouseUpThisFrame() bool {
 	return ctx.Mouse.IsMouseDownPrevious && !ctx.Mouse.IsMouseDown
 }
 
-func (ctx *UIContext) WithPosition(pos image.Point) *UIContext {
-	newCtx := *ctx
-	newCtx.Pos = &UIPosition{pos}
-
-	return &newCtx
-}
-
-func (ctx *UIContext) WithSize(size image.Point) *UIContext {
-	newCtx := *ctx
-	newCtx.Size = &UISize{size}
-
-	return &newCtx
-}
-
 type ButtonResult struct {
 	Clicked bool
 	Size    image.Point
 }
 
-func (br ButtonResult) DrawnSize() image.Point {
-	return br.Size
-}
-
-func (ctx *UIContext) DoButton(id, text string, c color.RGBA) ButtonResult {
-	if ctx.Pos == nil || ctx.Size == nil {
-		log.Printf("ERROR: Button '%v' didn't have enough info to be displayed", id)
-		return ButtonResult{}
-	}
-
+func (ctx *UIContext) Button(id, text string, pos image.Point, size image.Point, c color.RGBA) ButtonResult {
 	me := UIID{
 		Name: id,
 	}
 	result := false
 
 	r := image.Rect(
-		ctx.Pos.X,
-		ctx.Pos.Y,
-		ctx.Pos.X+ctx.Size.X,
-		ctx.Pos.Y+ctx.Size.Y,
+		pos.X,
+		pos.Y,
+		pos.X+size.X,
+		pos.Y+size.Y,
 	)
 
 	if ctx.IsActive(me) {
@@ -171,23 +127,18 @@ type ListLayouter struct {
 	horizontal bool
 }
 
-func (ctx *UIContext) NewListLayouter(spacing int, horizontal bool) *ListLayouter {
-	if ctx.Pos == nil {
-		log.Printf("ERROR: List layouter needs a starting position")
-		return nil
-	}
-
+func (ctx *UIContext) NewListLayouter(startPos image.Point, spacing int, horizontal bool) *ListLayouter {
 	return &ListLayouter{
 		Size:       image.Pt(0, 0),
 		ctx:        ctx,
-		itemPos:    (*ctx.Pos).Point,
+		itemPos:    startPos,
 		spacing:    spacing,
 		horizontal: horizontal,
 	}
 }
 
-func (l *ListLayouter) Item(f func(ctx *UIContext) image.Point) {
-	resultSize := f(l.ctx.WithPosition(l.itemPos))
+func (l *ListLayouter) Item(f func(pos image.Point) image.Point) {
+	resultSize := f(l.itemPos)
 
 	if l.horizontal {
 		l.itemPos = l.itemPos.Add(image.Pt(resultSize.X+l.spacing, 0))
