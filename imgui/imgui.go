@@ -1,6 +1,7 @@
 package imgui
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"io/ioutil"
@@ -172,32 +173,33 @@ func genQuadVAO() uint32 {
 }
 
 func doUI(ctx *UIContext) {
-	doListItem := ctx.NewListLayouter(image.Pt(100, 100), 20)
+	columnList := ctx.WithPosition(image.Pt(20, 20)).NewListLayouter(20, true)
 
-	doListItem(func(ctx *UIContext) SizedResult {
-		result := ctx.WithSize(image.Pt(200, 40)).DoButton("b1", "Hello, world!", color.RGBA{255, 0, 0, 255})
-		if result.Clicked {
-			log.Print("Button 1 clicked!")
-		}
+	for c := 0; c < 4; c++ {
+		columnList.Item(func(ctx *UIContext) image.Point {
+			rowList := ctx.NewListLayouter(20, false)
 
-		return result
-	})
-	doListItem(func(ctx *UIContext) SizedResult {
-		height := 80 + int(math.Sin(float64(time.Now().UnixNano())/float64(time.Second))*30)
+			for r := 0; r < 4; r++ {
+				id := c*4 + r
+				rowList.Item(func(ctx *UIContext) image.Point {
+					t := float64(time.Now().UnixNano())/float64(time.Second) + float64(id)/2
+					width := 60 + int(math.Cos(t)*30)
+					height := 60 + int(math.Sin(t)*30)
 
-		result := ctx.WithSize(image.Pt(200, height)).DoButton("b2", "Hello, world!", color.RGBA{0, 0, 255, 255})
-		if result.Clicked {
-			log.Print("Button 2 clicked!")
-		}
+					result := ctx.WithSize(image.Pt(width, height)).DoButton(fmt.Sprintf("b%v", id), "Hello, world!", buttonColor(r, c))
+					if result.Clicked {
+						log.Printf("Button %v clicked!", id)
+					}
 
-		return result
-	})
-	doListItem(func(ctx *UIContext) SizedResult {
-		result := ctx.WithSize(image.Pt(200, 80)).DoButton("b3", "Hello, world!", color.RGBA{0, 255, 0, 255})
-		if result.Clicked {
-			log.Print("Button 3 clicked!")
-		}
+					return result.Size
+				})
+			}
 
-		return result
-	})
+			return rowList.Size
+		})
+	}
+}
+
+func buttonColor(r, c int) color.RGBA {
+	return color.RGBA{100 + uint8(r*25), 100 + uint8(c*25), 100, 255}
 }

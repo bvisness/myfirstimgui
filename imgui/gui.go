@@ -71,18 +71,15 @@ func (ctx *UIContext) IsActive(obj UIID) bool {
 
 func (ctx *UIContext) SetHot(obj UIID) {
 	if ctx.Base.Active == nil {
-		log.Printf("%v is now hot", obj)
 		ctx.Base.Hot = &obj
 	}
 }
 
 func (ctx *UIContext) SetActive(obj UIID) {
-	log.Printf("%v is now active", obj)
 	ctx.Base.Active = &obj
 }
 
 func (ctx *UIContext) SetNoneActive() {
-	log.Printf("nothing is active")
 	ctx.Base.Active = nil
 }
 
@@ -165,11 +162,43 @@ func (ctx *UIContext) DoButton(id, text string, c color.RGBA) ButtonResult {
 	}
 }
 
-func (ctx *UIContext) NewListLayouter(startPos image.Point, spacing int) func(func(ctx *UIContext) SizedResult) {
-	pos := startPos
+type ListLayouter struct {
+	Size image.Point
 
-	return func(f func(ctx *UIContext) SizedResult) {
-		result := f(ctx.WithPosition(pos))
-		pos = pos.Add(image.Pt(0, result.DrawnSize().Y+spacing))
+	ctx        *UIContext
+	itemPos    image.Point
+	spacing    int
+	horizontal bool
+}
+
+func (ctx *UIContext) NewListLayouter(spacing int, horizontal bool) *ListLayouter {
+	if ctx.Pos == nil {
+		log.Printf("ERROR: List layouter needs a starting position")
+		return nil
+	}
+
+	return &ListLayouter{
+		Size:       image.Pt(0, 0),
+		ctx:        ctx,
+		itemPos:    (*ctx.Pos).Point,
+		spacing:    spacing,
+		horizontal: horizontal,
+	}
+}
+
+func (l *ListLayouter) Item(f func(ctx *UIContext) image.Point) {
+	resultSize := f(l.ctx.WithPosition(l.itemPos))
+
+	if l.horizontal {
+		l.itemPos = l.itemPos.Add(image.Pt(resultSize.X+l.spacing, 0))
+	} else {
+		l.itemPos = l.itemPos.Add(image.Pt(0, resultSize.Y+l.spacing))
+	}
+
+	if resultSize.X > l.Size.X {
+		l.Size.X = resultSize.X
+	}
+	if resultSize.Y > l.Size.Y {
+		l.Size.Y = resultSize.Y
 	}
 }
