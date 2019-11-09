@@ -5,7 +5,9 @@ import (
 	"image/color"
 	"io/ioutil"
 	"log"
+	"math"
 	"runtime"
+	"time"
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -87,19 +89,23 @@ func Main() {
 			}()
 
 			ctx := UIContext{
-				Hot:    hotPrevious,
-				Active: activePrevious,
+				Base: &UIBase{
+					Hot:    hotPrevious,
+					Active: activePrevious,
+				},
 
-				MousePosPrevious:    image.Pt(mouseXPrevious, mouseYPrevious),
-				MousePos:            image.Pt(mouseX, mouseY),
-				IsMouseDownPrevious: mouseLeftStatePrevious == glfw.Press,
-				IsMouseDown:         mouseLeftState == glfw.Press,
+				Mouse: UIMouse{
+					PosPrevious:         image.Pt(mouseXPrevious, mouseYPrevious),
+					Pos:                 image.Pt(mouseX, mouseY),
+					IsMouseDownPrevious: mouseLeftStatePrevious == glfw.Press,
+					IsMouseDown:         mouseLeftState == glfw.Press,
+				},
 
 				Img: currentTex.Img,
 			}
 			defer func() {
-				hotPrevious = ctx.Hot
-				activePrevious = ctx.Active
+				hotPrevious = ctx.Base.Hot
+				activePrevious = ctx.Base.Active
 			}()
 
 			currentTex.Img.Fill(color.RGBA{255, 255, 255, 0})
@@ -166,11 +172,32 @@ func genQuadVAO() uint32 {
 }
 
 func doUI(ctx *UIContext) {
-	if (ctx.DoButton("b1", "Hello, world!", image.Rect(100, 100, 300, 180), color.RGBA{255, 0, 0, 255})) {
-		log.Print("Button 1 clicked!")
-	}
+	doListItem := ctx.NewListLayouter(image.Pt(100, 100), 20)
 
-	if (ctx.DoButton("b2", "Hello, world!", image.Rect(200, 200, 400, 280), color.RGBA{0, 0, 255, 255})) {
-		log.Print("Button 2 clicked!")
-	}
+	doListItem(func(ctx *UIContext) SizedResult {
+		result := ctx.WithSize(image.Pt(200, 40)).DoButton("b1", "Hello, world!", color.RGBA{255, 0, 0, 255})
+		if result.Clicked {
+			log.Print("Button 1 clicked!")
+		}
+
+		return result
+	})
+	doListItem(func(ctx *UIContext) SizedResult {
+		height := 80 + int(math.Sin(float64(time.Now().UnixNano())/float64(time.Second))*30)
+
+		result := ctx.WithSize(image.Pt(200, height)).DoButton("b2", "Hello, world!", color.RGBA{0, 0, 255, 255})
+		if result.Clicked {
+			log.Print("Button 2 clicked!")
+		}
+
+		return result
+	})
+	doListItem(func(ctx *UIContext) SizedResult {
+		result := ctx.WithSize(image.Pt(200, 80)).DoButton("b3", "Hello, world!", color.RGBA{0, 255, 0, 255})
+		if result.Clicked {
+			log.Print("Button 3 clicked!")
+		}
+
+		return result
+	})
 }
