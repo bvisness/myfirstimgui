@@ -34,13 +34,21 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 		ui.ElementState[me] = state
 	}()
 
-	windowRect := rectutil.SizeRect(state.Pos, state.Size)
-	if !state.Open {
-		windowRect = rectutil.SizeRect(state.Pos, image.Pt(state.Size.X, ui.Style.WidgetSize))
+	var windowRect image.Rectangle
+	var titleBarRect image.Rectangle
+	var toggleRect image.Rectangle
+	var resizeRect image.Rectangle
+
+	computeRects := func() {
+		windowRect = rectutil.SizeRect(state.Pos, state.Size)
+		if !state.Open {
+			windowRect = rectutil.SizeRect(state.Pos, image.Pt(state.Size.X, ui.Style.WidgetSize))
+		}
+		titleBarRect = rectutil.SizeRect(image.Pt(state.Pos.X+ui.Style.WidgetSize, state.Pos.Y), image.Pt(state.Size.X-ui.Style.WidgetSize, ui.Style.WidgetSize))
+		toggleRect = rectutil.SizeRect(state.Pos, image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize))
+		resizeRect = image.Rectangle{windowRect.Max.Sub(image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize)), windowRect.Max}
 	}
-	titleBarRect := rectutil.SizeRect(image.Pt(state.Pos.X+ui.Style.WidgetSize, state.Pos.Y), image.Pt(state.Size.X-ui.Style.WidgetSize, ui.Style.WidgetSize))
-	toggleRect := rectutil.SizeRect(state.Pos, image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize))
-	resizeRect := image.Rectangle{windowRect.Max.Sub(image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize)), windowRect.Max}
+	computeRects()
 
 	if ui.IsActive(me) {
 		switch state.ActiveWidget {
@@ -80,6 +88,8 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 	if rectutil.PointInRect(ui.Mouse.Pos, windowRect) {
 		ui.SetHot(me)
 	}
+
+	computeRects() // recompute before drawing to reduce apparent lag
 
 	ui.Img.DrawRect(windowRect, color.RGBA{0, 0, 0, 200})
 	ui.Img.DrawRect(titleBarRect, ColorBarBackground)
