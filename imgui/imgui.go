@@ -208,13 +208,20 @@ func doUI(ui *UIContext) {
 		list := ui.ListLayoutWithExcess(rectutil.GetLL(windowContent), windowContent.Size(), Up)
 
 		list.Item(func(placer rectutil.Placer, width int) image.Point {
-			buttonRect := placer.PlaceSize(image.Pt(width, 40))
-			result := ui.Button("b1", "Wowee", buttonRect.Min, buttonRect.Size(), color.RGBA{255, 100, 100, 255})
-			if result.Clicked {
-				log.Print("Button clicked inside window!")
-			}
+			buttons := ui.EvenlySpacedListFixedCross(2, placer.PlaceSize(image.Pt(width, 40)), Right)
 
-			return result.Size
+			buttons.Item(func(rect image.Rectangle) {
+				if result := ui.Button("bCancel", "Cancel", rect.Min, rect.Size(), color.RGBA{255, 100, 100, 255}); result.Clicked {
+					log.Print("Cancel button clicked")
+				}
+			})
+			buttons.Item(func(rect image.Rectangle) {
+				if result := ui.Button("bSubmit", "Submit", rect.Min, rect.Size(), color.RGBA{100, 255, 100, 255}); result.Clicked {
+					log.Print("Submit button clicked")
+				}
+			})
+
+			return buttons.Size()
 		})
 		list.Excess(func(excess image.Rectangle) {
 			ui.Button("b2", "asdf", excess.Min, excess.Size(), color.RGBA{100, 100, 255, 255})
