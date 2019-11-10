@@ -23,3 +23,11 @@ func AbsInt(a int) int {
 		return a
 	}
 }
+
+func LerpIntF(a, b int, t float32) int {
+	return int(float32(a)*(1-t) + float32(b)*t)
+}
+
+func LerpInt(a, b, tMin, tMax, t int) int {
+	return LerpIntF(a, b, float32(t-tMin)/float32(tMax-tMin))
+}

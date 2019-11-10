@@ -86,7 +86,7 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 	ui.Img.DrawRect(windowRect, color.RGBA{0, 0, 0, 200})
 	ui.Img.DrawRect(titleBarRect, color.RGBA{200, 200, 200, 50})
 	ui.Img.DrawRect(toggleRect, color.RGBA{200, 200, 200, 100})
-	ui.Img.DrawRect(resizeRect, color.RGBA{200, 200, 200, 100})
+	ui.Img.DrawHalfRect(resizeRect, color.RGBA{200, 200, 200, 100}, LowerRight)
 
 	contentRect := image.Rect(
 		windowRect.Min.X+ui.Style.Spacing,

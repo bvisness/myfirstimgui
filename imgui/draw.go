@@ -5,12 +5,18 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/bvisness/myfirstimgui/imath"
+
 	"github.com/go-gl/gl/v4.1-core/gl"
 )
 
-var (
-	White = color.RGBA{255, 255, 255, 255}
-	Black = color.RGBA{0, 0, 0, 255}
+type HalfRectMode int
+
+const (
+	UpperLeft HalfRectMode = iota
+	LowerLeft
+	UpperRight
+	LowerRight
 )
 
 type UIImage struct {
@@ -61,6 +67,32 @@ func (i UIImage) DrawRect(r image.Rectangle, c color.RGBA) {
 	for x := r.Min.X; x <= r.Max.X; x++ {
 		for y := r.Min.Y; y <= r.Max.Y; y++ {
 			i.SetRGBA(x, y, AlphaOver(i.RGBAAt(x, y), c))
+		}
+	}
+}
+
+func (i UIImage) DrawHalfRect(r image.Rectangle, c color.RGBA, mode HalfRectMode) {
+	for x := r.Min.X; x <= r.Max.X; x++ {
+		var yThreshold int
+		switch mode {
+		case UpperLeft, LowerRight:
+			yThreshold = imath.LerpInt(r.Max.Y, r.Min.Y, r.Min.X, r.Max.X, x)
+		default:
+			yThreshold = imath.LerpInt(r.Min.Y, r.Max.Y, r.Min.X, r.Max.X, x)
+		}
+
+		var whenAbove bool
+		switch mode {
+		case UpperLeft, UpperRight:
+			whenAbove = true
+		default:
+			whenAbove = false
+		}
+
+		for y := r.Min.Y; y <= r.Max.Y; y++ {
+			if whenAbove && y <= yThreshold || !whenAbove && y >= yThreshold {
+				i.SetRGBA(x, y, AlphaOver(i.RGBAAt(x, y), c))
+			}
 		}
 	}
 }
