@@ -55,9 +55,9 @@ func (l *ListLayoutWithExcess) Excess(f func(r image.Rectangle)) {
 
 	switch l.dir {
 	case Up, Down:
-		remainingSize = image.Pt(l.totalSize.X, l.totalSize.Y-imath.AbsInt(deltaPos.Y))
+		remainingSize = image.Pt(l.totalSize.X, l.totalSize.Y-imath.Abs(deltaPos.Y))
 	case Left, Right:
-		remainingSize = image.Pt(l.totalSize.X-imath.AbsInt(deltaPos.X), l.totalSize.Y)
+		remainingSize = image.Pt(l.totalSize.X-imath.Abs(deltaPos.X), l.totalSize.Y)
 	}
 
 	f(rectutil.PlaceSize(remainingSize, l.itemPos, dirToPlacerMode(l.dir)))

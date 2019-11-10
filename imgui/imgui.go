@@ -1,6 +1,7 @@
 package imgui
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"io/ioutil"
@@ -94,7 +95,8 @@ func Main() {
 				Active: activePrevious,
 
 				Style: UIStyle{
-					Spacing: 16,
+					Spacing:    16,
+					WidgetSize: 16,
 				},
 				Mouse: UIMouse{
 					PosPrevious:         image.Pt(mouseXPrevious, mouseYPrevious),
@@ -208,7 +210,7 @@ func doUI(ui *UIContext) {
 		list := ui.ListLayoutWithExcess(rectutil.GetLL(windowContent), windowContent.Size(), Up)
 
 		list.Item(func(placer rectutil.Placer, width int) image.Point {
-			buttons := ui.EvenlySpacedListFixedCross(2, placer.PlaceSize(image.Pt(width, 40)), Right)
+			buttons := ui.EvenlySpacedListFixedCross(2, placer.PlaceSize(image.Pt(width, 40)), Right, nil)
 
 			buttons.Item(func(rect image.Rectangle) {
 				if result := ui.Button("bCancel", "Cancel", rect.Min, rect.Size(), color.RGBA{255, 100, 100, 255}); result.Clicked {
@@ -224,7 +226,24 @@ func doUI(ui *UIContext) {
 			return buttons.Size()
 		})
 		list.Excess(func(excess image.Rectangle) {
-			ui.Button("b2", "asdf", excess.Min, excess.Size(), color.RGBA{100, 100, 255, 255})
+			ui.ScrollPane("bob", excess, 1000, func(contentArea image.Rectangle) {
+				numButtons := 20
+				buttons := ui.EvenlySpacedListFixedCross(numButtons, contentArea, Down, &UIStyle{Spacing: 0})
+
+				for i := 1; i <= 20; i++ {
+					buttons.Item(func(rect image.Rectangle) {
+						c := color.RGBA{100, 100, 255, 255}
+						if i%2 == 0 {
+							c = color.RGBA{255, 100, 255, 255}
+						}
+
+						result := ui.Button(fmt.Sprintf("scrollbtn-%v", i), "Hello", rect.Min, rect.Size(), c)
+						if result.Clicked {
+							log.Printf("Button %v clicked in scroll pane", i)
+						}
+					})
+				}
+			})
 		})
 	}
 }

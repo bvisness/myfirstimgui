@@ -2,6 +2,7 @@ package imgui
 
 import (
 	"image"
+	"image/color"
 )
 
 type Direction int
@@ -11,6 +12,11 @@ const (
 	Down
 	Left
 	Right
+)
+
+var (
+	ColorBarBackground = color.RGBA{200, 200, 200, 50}
+	ColorWidget        = color.RGBA{200, 200, 200, 100}
 )
 
 type UIID struct {
@@ -30,8 +36,9 @@ type UIMouse struct {
 }
 
 type UIStyle struct {
-	Spacing int
-	// in future: widget size, or some kind of overall scaling factor for interactive things
+	Spacing    int
+	WidgetSize int
+	// in future, some kind of overall scaling factor for interactive things?
 }
 
 type UIContext struct {
@@ -44,6 +51,16 @@ type UIContext struct {
 	Img UIImage
 
 	ElementState map[UIID]interface{}
+}
+
+func (ui *UIContext) WithClip(clip image.Rectangle, f func()) {
+	originalClipArea := ui.Img.ClipRect
+	defer func() {
+		ui.Img.ClipRect = originalClipArea
+	}()
+
+	ui.Img.ClipRect = clip
+	f()
 }
 
 func (ui *UIContext) IsHot(obj UIID) bool {

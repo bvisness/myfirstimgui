@@ -15,8 +15,6 @@ type windowState struct {
 }
 
 func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forceNewState bool) (bool, image.Rectangle) {
-	widgetSize := 16
-
 	widgetToggle := 1
 	widgetResize := 2
 	widgetTitleBar := 3
@@ -38,11 +36,11 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 
 	windowRect := rectutil.SizeRect(state.Pos, state.Size)
 	if !state.Open {
-		windowRect = rectutil.SizeRect(state.Pos, image.Pt(state.Size.X, widgetSize))
+		windowRect = rectutil.SizeRect(state.Pos, image.Pt(state.Size.X, ui.Style.WidgetSize))
 	}
-	titleBarRect := rectutil.SizeRect(image.Pt(state.Pos.X+widgetSize, state.Pos.Y), image.Pt(state.Size.X-widgetSize, widgetSize))
-	toggleRect := rectutil.SizeRect(state.Pos, image.Pt(widgetSize, widgetSize))
-	resizeRect := image.Rectangle{windowRect.Max.Sub(image.Pt(widgetSize, widgetSize)), windowRect.Max}
+	titleBarRect := rectutil.SizeRect(image.Pt(state.Pos.X+ui.Style.WidgetSize, state.Pos.Y), image.Pt(state.Size.X-ui.Style.WidgetSize, ui.Style.WidgetSize))
+	toggleRect := rectutil.SizeRect(state.Pos, image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize))
+	resizeRect := image.Rectangle{windowRect.Max.Sub(image.Pt(ui.Style.WidgetSize, ui.Style.WidgetSize)), windowRect.Max}
 
 	if ui.IsActive(me) {
 		switch state.ActiveWidget {
@@ -84,9 +82,9 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 	}
 
 	ui.Img.DrawRect(windowRect, color.RGBA{0, 0, 0, 200})
-	ui.Img.DrawRect(titleBarRect, color.RGBA{200, 200, 200, 50})
-	ui.Img.DrawRect(toggleRect, color.RGBA{200, 200, 200, 100})
-	ui.Img.DrawHalfRect(resizeRect, color.RGBA{200, 200, 200, 100}, LowerRight)
+	ui.Img.DrawRect(titleBarRect, ColorBarBackground)
+	ui.Img.DrawRect(toggleRect, ColorWidget)
+	ui.Img.DrawHalfRect(resizeRect, ColorWidget, LowerRight)
 
 	contentRect := image.Rect(
 		windowRect.Min.X+ui.Style.Spacing,

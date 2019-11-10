@@ -16,11 +16,11 @@ const (
 )
 
 func MinPoint(p1, p2 image.Point) image.Point {
-	return image.Pt(imath.MinInt(p1.X, p2.X), imath.MinInt(p1.Y, p2.Y))
+	return image.Pt(imath.Min(p1.X, p2.X), imath.Min(p1.Y, p2.Y))
 }
 
 func MaxPoint(p1, p2 image.Point) image.Point {
-	return image.Pt(imath.MaxInt(p1.X, p2.X), imath.MaxInt(p1.Y, p2.Y))
+	return image.Pt(imath.Max(p1.X, p2.X), imath.Max(p1.Y, p2.Y))
 }
 
 func SizeRect(pos, size image.Point) image.Rectangle {

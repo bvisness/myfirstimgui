@@ -9,15 +9,22 @@ import (
 type EvenlySpacedListFixedCross struct {
 	ui        *UIContext
 	n         int
+	spacing   int
 	itemIndex int
 	dir       Direction
 	totalArea image.Rectangle
 }
 
-func (ui *UIContext) EvenlySpacedListFixedCross(n int, totalArea image.Rectangle, dir Direction) EvenlySpacedListFixedCross {
+func (ui *UIContext) EvenlySpacedListFixedCross(n int, totalArea image.Rectangle, dir Direction, styleOverride *UIStyle) EvenlySpacedListFixedCross {
+	spacing := ui.Style.Spacing
+	if styleOverride != nil {
+		spacing = styleOverride.Spacing
+	}
+
 	return EvenlySpacedListFixedCross{
 		ui:        ui,
 		n:         n,
+		spacing:   spacing,
 		itemIndex: 0,
 		dir:       dir,
 		totalArea: totalArea,
@@ -36,9 +43,9 @@ func (l *EvenlySpacedListFixedCross) Item(f func(rect image.Rectangle)) {
 		crossSize = l.totalArea.Size().Y
 	}
 
-	sizeLessDividers := mainSize - l.ui.Style.Spacing*(l.n-1)
+	sizeLessDividers := mainSize - l.spacing*(l.n-1)
 	itemMainSize := sizeLessDividers / l.n
-	itemOffset := (itemMainSize + l.ui.Style.Spacing) * l.itemIndex
+	itemOffset := (itemMainSize + l.spacing) * l.itemIndex
 
 	var resultRect image.Rectangle
 	switch l.dir {

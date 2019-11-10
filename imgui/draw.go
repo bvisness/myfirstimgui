@@ -5,6 +5,8 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/bvisness/myfirstimgui/rectutil"
+
 	"github.com/bvisness/myfirstimgui/imath"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -21,6 +23,7 @@ const (
 
 type UIImage struct {
 	*image.RGBA
+	ClipRect image.Rectangle
 }
 
 type UITexture struct {
@@ -29,7 +32,10 @@ type UITexture struct {
 }
 
 func NewUITexture(width, height int, c color.RGBA) *UITexture {
-	img := UIImage{image.NewRGBA(image.Rect(0, 0, width, height))}
+	img := UIImage{
+		RGBA:     image.NewRGBA(image.Rect(0, 0, width, height)),
+		ClipRect: image.Rect(0, 0, width, height),
+	}
 	if img.Stride != img.Rect.Size().X*4 {
 		panic(fmt.Errorf("unsupported stride"))
 	}
@@ -63,10 +69,16 @@ func (i UIImage) Fill(c color.RGBA) {
 	}
 }
 
+func (i UIImage) SetRGBAClipped(x, y int, c color.RGBA) {
+	if rectutil.PointInRect(image.Pt(x, y), i.ClipRect) {
+		i.SetRGBA(x, y, c)
+	}
+}
+
 func (i UIImage) DrawRect(r image.Rectangle, c color.RGBA) {
 	for x := r.Min.X; x <= r.Max.X; x++ {
 		for y := r.Min.Y; y <= r.Max.Y; y++ {
-			i.SetRGBA(x, y, AlphaOver(i.RGBAAt(x, y), c))
+			i.SetRGBAClipped(x, y, AlphaOver(i.RGBAAt(x, y), c))
 		}
 	}
 }
@@ -76,9 +88,9 @@ func (i UIImage) DrawHalfRect(r image.Rectangle, c color.RGBA, mode HalfRectMode
 		var yThreshold int
 		switch mode {
 		case UpperLeft, LowerRight:
-			yThreshold = imath.LerpInt(r.Max.Y, r.Min.Y, r.Min.X, r.Max.X, x)
+			yThreshold = imath.Lerp(r.Max.Y, r.Min.Y, r.Min.X, r.Max.X, x)
 		default:
-			yThreshold = imath.LerpInt(r.Min.Y, r.Max.Y, r.Min.X, r.Max.X, x)
+			yThreshold = imath.Lerp(r.Min.Y, r.Max.Y, r.Min.X, r.Max.X, x)
 		}
 
 		var whenAbove bool
@@ -91,7 +103,7 @@ func (i UIImage) DrawHalfRect(r image.Rectangle, c color.RGBA, mode HalfRectMode
 
 		for y := r.Min.Y; y <= r.Max.Y; y++ {
 			if whenAbove && y <= yThreshold || !whenAbove && y >= yThreshold {
-				i.SetRGBA(x, y, AlphaOver(i.RGBAAt(x, y), c))
+				i.SetRGBAClipped(x, y, AlphaOver(i.RGBAAt(x, y), c))
 			}
 		}
 	}
