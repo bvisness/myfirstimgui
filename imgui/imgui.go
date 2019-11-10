@@ -8,12 +8,14 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/bvisness/myfirstimgui/rectutil"
+
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
-const width = 500
-const height = 500
+const width = 1000
+const height = 800
 
 var quadVerts = []float32{
 	// vert positions double as texture coordinates (with some mapping)
@@ -91,6 +93,9 @@ func Main() {
 				Hot:    hotPrevious,
 				Active: activePrevious,
 
+				Style: UIStyle{
+					Spacing: 16,
+				},
 				Mouse: UIMouse{
 					PosPrevious:         image.Pt(mouseXPrevious, mouseYPrevious),
 					Pos:                 image.Pt(mouseX, mouseY),
@@ -173,11 +178,11 @@ func genQuadVAO() uint32 {
 }
 
 func doUI(ui *UIContext) {
-	//columnList := ui.NewListLayouter(image.Pt(20, 20), 20, true)
+	//columnList := ui.ListLayout(image.Pt(20, 20), 20, true)
 	//
 	//for c := 0; c < 4; c++ {
 	//	columnList.Item(func(pos image.Point) image.Point {
-	//		rowList := ui.NewListLayouter(pos, 20, false)
+	//		rowList := ui.ListLayout(pos, 20, false)
 	//
 	//		for r := 0; r < 4; r++ {
 	//			id := c*4 + r
@@ -200,9 +205,20 @@ func doUI(ui *UIContext) {
 	//}
 
 	if open, windowContent := ui.Window("test", image.Pt(100, 100), image.Pt(300, 300), false); open {
-		if result := ui.Button("b1", "Wowee", windowContent.Min, image.Pt(windowContent.Size().X, 40), color.RGBA{255, 100, 100, 255}); result.Clicked {
-			log.Print("Button clicked inside window!")
-		}
+		list := ui.ListLayoutWithExcess(rectutil.GetLL(windowContent), windowContent.Size(), Up)
+
+		list.Item(func(pos image.Point, width int) image.Point {
+			buttonHeight := 40
+			result := ui.Button("b1", "Wowee", pos.Sub(image.Pt(0, buttonHeight)), image.Pt(width, buttonHeight), color.RGBA{255, 100, 100, 255})
+			if result.Clicked {
+				log.Print("Button clicked inside window!")
+			}
+
+			return result.Size
+		})
+		list.Excess(func(pos, size image.Point) {
+			ui.Button("b2", "asdf", pos.Sub(image.Pt(0, size.Y)), size, color.RGBA{100, 100, 255, 255})
+		})
 	}
 }
 

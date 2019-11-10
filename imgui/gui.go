@@ -4,7 +4,18 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/bvisness/myfirstimgui/util"
+	"github.com/bvisness/myfirstimgui/imath"
+
+	"github.com/bvisness/myfirstimgui/rectutil"
+)
+
+type Direction int
+
+const (
+	Up Direction = iota + 1
+	Down
+	Left
+	Right
 )
 
 type UIID struct {
@@ -23,10 +34,16 @@ type UIMouse struct {
 	IsMouseDown         bool
 }
 
+type UIStyle struct {
+	Spacing int
+	// in future: widget size, or some kind of overall scaling factor for interactive things
+}
+
 type UIContext struct {
 	Hot    *UIID
 	Active *UIID
 
+	Style UIStyle
 	Mouse UIMouse
 
 	Img UIImage
@@ -87,9 +104,9 @@ func (ui *UIContext) Button(id, text string, pos, size image.Point, c color.RGBA
 	}
 	result := false
 
-	r := util.SizeRect(pos, size)
+	r := rectutil.SizeRect(pos, size)
 
-	if util.PointInRect(ui.Mouse.Pos, r) {
+	if rectutil.PointInRect(ui.Mouse.Pos, r) {
 		ui.SetHot(me)
 	}
 
@@ -148,12 +165,12 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 		ui.ElementState[me] = state
 	}()
 
-	windowRect := util.SizeRect(state.Pos, state.Size)
+	windowRect := rectutil.SizeRect(state.Pos, state.Size)
 	if !state.Open {
-		windowRect = util.SizeRect(state.Pos, image.Pt(state.Size.X, widgetSize))
+		windowRect = rectutil.SizeRect(state.Pos, image.Pt(state.Size.X, widgetSize))
 	}
-	titleBarRect := util.SizeRect(image.Pt(state.Pos.X+widgetSize, state.Pos.Y), image.Pt(state.Size.X-widgetSize, widgetSize))
-	toggleRect := util.SizeRect(state.Pos, image.Pt(widgetSize, widgetSize))
+	titleBarRect := rectutil.SizeRect(image.Pt(state.Pos.X+widgetSize, state.Pos.Y), image.Pt(state.Size.X-widgetSize, widgetSize))
+	toggleRect := rectutil.SizeRect(state.Pos, image.Pt(widgetSize, widgetSize))
 	resizeRect := image.Rectangle{windowRect.Max.Sub(image.Pt(widgetSize, widgetSize)), windowRect.Max}
 
 	if ui.IsActive(me) {
@@ -166,7 +183,7 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 				sizeDelta.Y = 0
 			}
 
-			state.Size = util.MaxPoint(state.Size.Add(sizeDelta), image.Pt(60, 40))
+			state.Size = rectutil.MaxPoint(state.Size.Add(sizeDelta), image.Pt(60, 40))
 		case widgetToggle:
 			if ui.IsMouseUpThisFrame() && ui.IsHot(me) {
 				state.Open = !state.Open
@@ -179,11 +196,11 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 	} else if ui.IsHot(me) {
 		if ui.IsMouseDownThisFrame() {
 			ui.SetActive(me)
-			if util.PointInRect(ui.Mouse.Pos, toggleRect) {
+			if rectutil.PointInRect(ui.Mouse.Pos, toggleRect) {
 				state.ActiveWidget = widgetToggle
-			} else if util.PointInRect(ui.Mouse.Pos, resizeRect) {
+			} else if rectutil.PointInRect(ui.Mouse.Pos, resizeRect) {
 				state.ActiveWidget = widgetResize
-			} else if util.PointInRect(ui.Mouse.Pos, titleBarRect) {
+			} else if rectutil.PointInRect(ui.Mouse.Pos, titleBarRect) {
 				state.ActiveWidget = widgetTitleBar
 			} else {
 				state.ActiveWidget = 0
@@ -191,7 +208,7 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 		}
 	}
 
-	if util.PointInRect(ui.Mouse.Pos, windowRect) {
+	if rectutil.PointInRect(ui.Mouse.Pos, windowRect) {
 		ui.SetHot(me)
 	}
 
@@ -201,41 +218,39 @@ func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forc
 	ui.Img.DrawRect(resizeRect, color.RGBA{200, 200, 200, 100})
 
 	contentRect := image.Rect(
-		windowRect.Min.X+widgetSize,
-		windowRect.Min.Y+2*widgetSize,
-		windowRect.Max.X-widgetSize,
-		windowRect.Max.Y-widgetSize,
+		windowRect.Min.X+ui.Style.Spacing,
+		windowRect.Min.Y+2*ui.Style.Spacing,
+		windowRect.Max.X-ui.Style.Spacing,
+		windowRect.Max.Y-ui.Style.Spacing,
 	)
 
 	return state.Open, contentRect
 }
 
-type ListLayouter struct {
+type ListLayout struct {
 	Size image.Point
 
-	ctx        *UIContext
+	ui         *UIContext
 	itemPos    image.Point
-	spacing    int
 	horizontal bool
 }
 
-func (ui *UIContext) NewListLayouter(startPos image.Point, spacing int, horizontal bool) *ListLayouter {
-	return &ListLayouter{
+func (ui *UIContext) ListLayout(startPos image.Point, spacing int, horizontal bool) ListLayout {
+	return ListLayout{
 		Size:       image.Pt(0, 0),
-		ctx:        ui,
+		ui:         ui,
 		itemPos:    startPos,
-		spacing:    spacing,
 		horizontal: horizontal,
 	}
 }
 
-func (l *ListLayouter) Item(f func(pos image.Point) image.Point) {
+func (l *ListLayout) Item(f func(pos image.Point) image.Point) {
 	resultSize := f(l.itemPos)
 
 	if l.horizontal {
-		l.itemPos = l.itemPos.Add(image.Pt(resultSize.X+l.spacing, 0))
+		l.itemPos = l.itemPos.Add(image.Pt(resultSize.X+l.ui.Style.Spacing, 0))
 	} else {
-		l.itemPos = l.itemPos.Add(image.Pt(0, resultSize.Y+l.spacing))
+		l.itemPos = l.itemPos.Add(image.Pt(0, resultSize.Y+l.ui.Style.Spacing))
 	}
 
 	if resultSize.X > l.Size.X {
@@ -244,4 +259,61 @@ func (l *ListLayouter) Item(f func(pos image.Point) image.Point) {
 	if resultSize.Y > l.Size.Y {
 		l.Size.Y = resultSize.Y
 	}
+}
+
+// TODO: The Up and Left directions force you to do this annoying subtraction dance. There has to be a way to make that easier.
+type ListLayoutWithExcess struct {
+	ui        *UIContext
+	dir       Direction
+	startPos  image.Point
+	itemPos   image.Point
+	totalSize image.Point
+}
+
+func (ui *UIContext) ListLayoutWithExcess(pos, totalSize image.Point, dir Direction) ListLayoutWithExcess {
+	return ListLayoutWithExcess{
+		ui:        ui,
+		dir:       dir,
+		startPos:  pos,
+		itemPos:   pos,
+		totalSize: totalSize,
+	}
+}
+
+func (l *ListLayoutWithExcess) Item(f func(pos image.Point, crossAxisLength int) image.Point) {
+	var crossAxisLength int
+	switch l.dir {
+	case Up, Down:
+		crossAxisLength = l.totalSize.X
+	case Left, Right:
+		crossAxisLength = l.totalSize.Y
+	}
+
+	resultSize := f(l.itemPos, crossAxisLength)
+
+	switch l.dir {
+	case Up:
+		l.itemPos = l.itemPos.Sub(image.Pt(0, resultSize.Y+l.ui.Style.Spacing))
+	case Down:
+		l.itemPos = l.itemPos.Add(image.Pt(0, resultSize.Y+l.ui.Style.Spacing))
+	case Left:
+		l.itemPos = l.itemPos.Sub(image.Pt(resultSize.X+l.ui.Style.Spacing, 0))
+	case Right:
+		l.itemPos = l.itemPos.Add(image.Pt(resultSize.X+l.ui.Style.Spacing, 0))
+	}
+}
+
+func (l *ListLayoutWithExcess) Excess(f func(pos, size image.Point)) {
+	deltaPos := l.itemPos.Sub(l.startPos)
+
+	var remainingSize image.Point
+
+	switch l.dir {
+	case Up, Down:
+		remainingSize = image.Pt(l.totalSize.X, l.totalSize.Y-imath.AbsInt(deltaPos.Y))
+	case Left, Right:
+		remainingSize = image.Pt(l.totalSize.X-imath.AbsInt(deltaPos.X), l.totalSize.Y)
+	}
+
+	f(l.itemPos, remainingSize)
 }
