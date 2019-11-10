@@ -30,44 +30,50 @@ type UIContext struct {
 	Mouse UIMouse
 
 	Img UIImage
+
+	ElementState map[UIID]interface{}
 }
 
-func (ctx *UIContext) IsHot(obj UIID) bool {
-	if ctx.Hot == nil {
+func (ui *UIContext) IsHot(obj UIID) bool {
+	if ui.Hot == nil {
 		return false
 	}
 
-	return *ctx.Hot == obj
+	return *ui.Hot == obj
 }
 
-func (ctx *UIContext) IsActive(obj UIID) bool {
-	if ctx.Active == nil {
+func (ui *UIContext) IsActive(obj UIID) bool {
+	if ui.Active == nil {
 		return false
 	}
 
-	return *ctx.Active == obj
+	return *ui.Active == obj
 }
 
-func (ctx *UIContext) SetHot(obj UIID) {
-	if ctx.Active == nil {
-		ctx.Hot = &obj
+func (ui *UIContext) SetHot(obj UIID) {
+	if ui.Active == nil {
+		ui.Hot = &obj
 	}
 }
 
-func (ctx *UIContext) SetActive(obj UIID) {
-	ctx.Active = &obj
+func (ui *UIContext) SetActive(obj UIID) {
+	ui.Active = &obj
 }
 
-func (ctx *UIContext) SetNoneActive() {
-	ctx.Active = nil
+func (ui *UIContext) SetNoneActive() {
+	ui.Active = nil
 }
 
-func (ctx *UIContext) IsMouseDownThisFrame() bool {
-	return !ctx.Mouse.IsMouseDownPrevious && ctx.Mouse.IsMouseDown
+func (ui *UIContext) IsMouseDownThisFrame() bool {
+	return !ui.Mouse.IsMouseDownPrevious && ui.Mouse.IsMouseDown
 }
 
-func (ctx *UIContext) IsMouseUpThisFrame() bool {
-	return ctx.Mouse.IsMouseDownPrevious && !ctx.Mouse.IsMouseDown
+func (ui *UIContext) IsMouseUpThisFrame() bool {
+	return ui.Mouse.IsMouseDownPrevious && !ui.Mouse.IsMouseDown
+}
+
+func (ui *UIContext) MouseDelta() image.Point {
+	return image.Pt(ui.Mouse.Pos.X-ui.Mouse.PosPrevious.X, ui.Mouse.Pos.Y-ui.Mouse.PosPrevious.Y)
 }
 
 type ButtonResult struct {
@@ -75,47 +81,133 @@ type ButtonResult struct {
 	Size    image.Point
 }
 
-func (ctx *UIContext) Button(id, text string, pos image.Point, size image.Point, c color.RGBA) ButtonResult {
+func (ui *UIContext) Button(id, text string, pos, size image.Point, c color.RGBA) ButtonResult {
 	me := UIID{
 		Name: id,
 	}
 	result := false
 
-	r := image.Rect(
-		pos.X,
-		pos.Y,
-		pos.X+size.X,
-		pos.Y+size.Y,
-	)
+	r := util.SizeRect(pos, size)
 
-	if ctx.IsActive(me) {
-		if ctx.IsMouseUpThisFrame() {
-			if ctx.IsHot(me) {
+	if util.PointInRect(ui.Mouse.Pos, r) {
+		ui.SetHot(me)
+	}
+
+	if ui.IsActive(me) {
+		if ui.IsMouseUpThisFrame() {
+			if ui.IsHot(me) {
 				result = true
 			}
-			ctx.SetNoneActive()
+			ui.SetNoneActive()
 		}
-	} else if ctx.IsHot(me) {
-		if ctx.IsMouseDownThisFrame() {
-			ctx.SetActive(me)
+	} else if ui.IsHot(me) {
+		if ui.IsMouseDownThisFrame() {
+			ui.SetActive(me)
 		}
 	}
 
-	if util.PointInRect(ctx.Mouse.Pos, r) {
-		ctx.SetHot(me)
-	}
-
-	if ctx.IsActive(me) {
+	if ui.IsActive(me) {
 		c = AlphaOver(c, color.RGBA{255, 255, 255, 50})
-	} else if ctx.IsHot(me) {
+	} else if ui.IsHot(me) {
 		c = AlphaOver(c, color.RGBA{255, 255, 255, 100})
 	}
-	ctx.Img.DrawRect(r, c)
+	ui.Img.DrawRect(r, c)
 
 	return ButtonResult{
 		Clicked: result,
 		Size:    r.Size(),
 	}
+}
+
+type windowState struct {
+	Open         bool
+	Pos          image.Point
+	Size         image.Point
+	ActiveWidget int
+}
+
+func (ui *UIContext) Window(id string, initialPos, initialSize image.Point, forceNewState bool) (bool, image.Rectangle) {
+	widgetSize := 16
+
+	widgetToggle := 1
+	widgetResize := 2
+	widgetTitleBar := 3
+
+	me := UIID{Name: id}
+
+	istate, stateExists := ui.ElementState[me]
+	if !stateExists || forceNewState {
+		istate = windowState{
+			Open: true,
+			Pos:  initialPos,
+			Size: initialSize,
+		}
+	}
+	state := istate.(windowState)
+	defer func() {
+		ui.ElementState[me] = state
+	}()
+
+	windowRect := util.SizeRect(state.Pos, state.Size)
+	if !state.Open {
+		windowRect = util.SizeRect(state.Pos, image.Pt(state.Size.X, widgetSize))
+	}
+	titleBarRect := util.SizeRect(image.Pt(state.Pos.X+widgetSize, state.Pos.Y), image.Pt(state.Size.X-widgetSize, widgetSize))
+	toggleRect := util.SizeRect(state.Pos, image.Pt(widgetSize, widgetSize))
+	resizeRect := image.Rectangle{windowRect.Max.Sub(image.Pt(widgetSize, widgetSize)), windowRect.Max}
+
+	if ui.IsActive(me) {
+		switch state.ActiveWidget {
+		case widgetTitleBar:
+			state.Pos = state.Pos.Add(ui.MouseDelta())
+		case widgetResize:
+			sizeDelta := ui.MouseDelta()
+			if !state.Open {
+				sizeDelta.Y = 0
+			}
+
+			state.Size = util.MaxPoint(state.Size.Add(sizeDelta), image.Pt(60, 40))
+		case widgetToggle:
+			if ui.IsMouseUpThisFrame() && ui.IsHot(me) {
+				state.Open = !state.Open
+			}
+		}
+
+		if ui.IsMouseUpThisFrame() {
+			ui.SetNoneActive()
+		}
+	} else if ui.IsHot(me) {
+		if ui.IsMouseDownThisFrame() {
+			ui.SetActive(me)
+			if util.PointInRect(ui.Mouse.Pos, toggleRect) {
+				state.ActiveWidget = widgetToggle
+			} else if util.PointInRect(ui.Mouse.Pos, resizeRect) {
+				state.ActiveWidget = widgetResize
+			} else if util.PointInRect(ui.Mouse.Pos, titleBarRect) {
+				state.ActiveWidget = widgetTitleBar
+			} else {
+				state.ActiveWidget = 0
+			}
+		}
+	}
+
+	if util.PointInRect(ui.Mouse.Pos, windowRect) {
+		ui.SetHot(me)
+	}
+
+	ui.Img.DrawRect(windowRect, color.RGBA{0, 0, 0, 200})
+	ui.Img.DrawRect(titleBarRect, color.RGBA{200, 200, 200, 50})
+	ui.Img.DrawRect(toggleRect, color.RGBA{200, 200, 200, 100})
+	ui.Img.DrawRect(resizeRect, color.RGBA{200, 200, 200, 100})
+
+	contentRect := image.Rect(
+		windowRect.Min.X+widgetSize,
+		windowRect.Min.Y+2*widgetSize,
+		windowRect.Max.X-widgetSize,
+		windowRect.Max.Y-widgetSize,
+	)
+
+	return state.Open, contentRect
 }
 
 type ListLayouter struct {
@@ -127,10 +219,10 @@ type ListLayouter struct {
 	horizontal bool
 }
 
-func (ctx *UIContext) NewListLayouter(startPos image.Point, spacing int, horizontal bool) *ListLayouter {
+func (ui *UIContext) NewListLayouter(startPos image.Point, spacing int, horizontal bool) *ListLayouter {
 	return &ListLayouter{
 		Size:       image.Pt(0, 0),
-		ctx:        ctx,
+		ctx:        ui,
 		itemPos:    startPos,
 		spacing:    spacing,
 		horizontal: horizontal,

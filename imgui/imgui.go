@@ -1,14 +1,11 @@
 package imgui
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"io/ioutil"
 	"log"
-	"math"
 	"runtime"
-	"time"
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -72,6 +69,7 @@ func Main() {
 
 	var hotPrevious *UIID = nil
 	var activePrevious *UIID = nil
+	var elementStatePrevious map[UIID]interface{} = make(map[UIID]interface{})
 
 	mouseXPrevious := -1
 	mouseYPrevious := -1
@@ -101,10 +99,14 @@ func Main() {
 				},
 
 				Img: currentTex.Img,
+
+				ElementState: elementStatePrevious,
 			}
 			defer func() {
+				// TODO: This is untenable, probably.
 				hotPrevious = ctx.Hot
 				activePrevious = ctx.Active
+				elementStatePrevious = ctx.ElementState
 			}()
 
 			currentTex.Img.Fill(color.RGBA{255, 255, 255, 0})
@@ -170,31 +172,37 @@ func genQuadVAO() uint32 {
 	return vao
 }
 
-func doUI(ctx *UIContext) {
-	columnList := ctx.NewListLayouter(image.Pt(20, 20), 20, true)
+func doUI(ui *UIContext) {
+	//columnList := ui.NewListLayouter(image.Pt(20, 20), 20, true)
+	//
+	//for c := 0; c < 4; c++ {
+	//	columnList.Item(func(pos image.Point) image.Point {
+	//		rowList := ui.NewListLayouter(pos, 20, false)
+	//
+	//		for r := 0; r < 4; r++ {
+	//			id := c*4 + r
+	//			rowList.Item(func(pos image.Point) image.Point {
+	//				t := float64(time.Now().UnixNano())/float64(time.Second) + float64(id)/2
+	//				width := 60 + int(math.Cos(t)*30)
+	//				height := 60 + int(math.Sin(t)*30)
+	//
+	//				result := ui.Button(fmt.Sprintf("b%v", id), "Hello, world!", pos, image.Pt(width, height), buttonColor(r, c))
+	//				if result.Clicked {
+	//					log.Printf("Button %v clicked!", id)
+	//				}
+	//
+	//				return result.Size
+	//			})
+	//		}
+	//
+	//		return rowList.Size
+	//	})
+	//}
 
-	for c := 0; c < 4; c++ {
-		columnList.Item(func(pos image.Point) image.Point {
-			rowList := ctx.NewListLayouter(pos, 20, false)
-
-			for r := 0; r < 4; r++ {
-				id := c*4 + r
-				rowList.Item(func(pos image.Point) image.Point {
-					t := float64(time.Now().UnixNano())/float64(time.Second) + float64(id)/2
-					width := 60 + int(math.Cos(t)*30)
-					height := 60 + int(math.Sin(t)*30)
-
-					result := ctx.Button(fmt.Sprintf("b%v", id), "Hello, world!", pos, image.Pt(width, height), buttonColor(r, c))
-					if result.Clicked {
-						log.Printf("Button %v clicked!", id)
-					}
-
-					return result.Size
-				})
-			}
-
-			return rowList.Size
-		})
+	if open, windowContent := ui.Window("test", image.Pt(100, 100), image.Pt(300, 300), false); open {
+		if result := ui.Button("b1", "Wowee", windowContent.Min, image.Pt(windowContent.Size().X, 40), color.RGBA{255, 100, 100, 255}); result.Clicked {
+			log.Print("Button clicked inside window!")
+		}
 	}
 }
 
