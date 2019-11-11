@@ -180,32 +180,6 @@ func genQuadVAO() uint32 {
 }
 
 func doUI(ui *UIContext) {
-	//columnList := ui.ListLayout(image.Pt(20, 20), 20, true)
-	//
-	//for c := 0; c < 4; c++ {
-	//	columnList.Item(func(pos image.Point) image.Point {
-	//		rowList := ui.ListLayout(pos, 20, false)
-	//
-	//		for r := 0; r < 4; r++ {
-	//			id := c*4 + r
-	//			rowList.Item(func(pos image.Point) image.Point {
-	//				t := float64(time.Now().UnixNano())/float64(time.Second) + float64(id)/2
-	//				width := 60 + int(math.Cos(t)*30)
-	//				height := 60 + int(math.Sin(t)*30)
-	//
-	//				result := ui.Button(fmt.Sprintf("b%v", id), "Hello, world!", pos, image.Pt(width, height), buttonColor(r, c))
-	//				if result.Clicked {
-	//					log.Printf("Button %v clicked!", id)
-	//				}
-	//
-	//				return result.Size
-	//			})
-	//		}
-	//
-	//		return rowList.Size
-	//	})
-	//}
-
 	if open, windowContent := ui.Window("test", image.Pt(100, 100), image.Pt(300, 300), false); open {
 		list := ui.ListLayoutWithExcess(rectutil.GetLL(windowContent), windowContent.Size(), Up)
 
